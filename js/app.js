@@ -133,9 +133,9 @@ function vistaMarcador() {
       <div class="leyenda"><span>En directo (si acabase ahora): <b>${fmtPts(pa)} – ${fmtPts(pb)}</b></span><span>${fmtPts(enJuegoPend)} en juego</span></div>
       ${ganador ? `<div class="ganador">${ganador}</div>` : ''}
     </section>
-    <h2>Partidos · mejor bola, peor bola e individuales a la vez</h2>
+    <h2>Partidos · parejas e individuales a la vez</h2>
     ${grupos}
-    <p class="muted">Cada grupo juega 18 hoyos y 4 partidos a la vez: mejor bola y peor bola por parejas, y dos individuales. Victoria = 1 punto, empate = ½.
+    <p class="muted">Cada grupo juega 18 hoyos y 3 partidos a la vez: uno por parejas y dos individuales. En el de parejas cada hoyo vale 2: uno a la mejor bola y otro a la peor (si ganas los dos, 2 UP en ese hoyo). Cada partido da 1 punto a la Ryder (empate = ½).
     ${cfg.handicap.activo ? `Con hándicap (${cfg.handicap.pctIndividual}% individual, ${cfg.handicap.pctFourball}% parejas).` : 'Scratch (sin hándicap).'}</p>
   </div>`;
 }
@@ -198,7 +198,7 @@ function vistaApuntar(g, tg, nom) {
   const val = (id) => (S.draft[key] && id in S.draft[key] ? S.draft[key][id] : sc[h]?.[id] ?? null);
   const par = cfg.campo.par[h - 1];
   const si = cfg.campo.si[h - 1];
-  const [fb, pb, i1, i2] = tg.partidos;
+  const [fb, i1, i2] = tg.partidos;
   const indDe = (id) => (i1.lados.flat().includes(id) ? i1 : i2);
 
   const botones = Array.from({ length: HOYOS }, (_, i) => {
@@ -237,6 +237,15 @@ function vistaApuntar(g, tg, nom) {
     if (r.muerto) return 'partido ya decidido';
     return r.r === 'A' ? esc(cfg.equipos.A.nombre) : r.r === 'B' ? esc(cfg.equipos.B.nombre) : 'empatado';
   };
+  const nomEq = (k) => esc(cfg.equipos[k].nombre);
+  const resParejas = (p) => {
+    const r = p.estado.hoyos[h - 1];
+    if (!r) return '—';
+    if (r.muerto) return 'partido ya decidido';
+    const lado = (v) => (v > 0 ? nomEq('A') : v < 0 ? nomEq('B') : 'empate');
+    const tot = r.d === 0 ? 'hoyo empatado' : `${lado(r.d)} +${Math.abs(r.d)}`;
+    return `${tot} <span class="muted">(mejor bola: ${lado(r.mejor)} · peor bola: ${lado(r.peor)})</span>`;
+  };
   const sucio = !!S.draft[key];
   return `<div class="hoyos">${botones}</div>
     <div class="card">
@@ -248,13 +257,12 @@ function vistaApuntar(g, tg, nom) {
         <button class="btn sec" data-act="hoyo" data-v="${Math.min(HOYOS, h + 1)}">›</button>
       </div>
       <div class="estado-hoyo">
-        <div>Mejor bola: <b>${res(fb)}</b></div>
-        <div>Peor bola: <b>${res(pb)}</b></div>
+        <div>Parejas: <b>${resParejas(fb)}</b></div>
         <div>${esc(nom[i1.lados[0][0]])} – ${esc(nom[i1.lados[1][0]])}: <b>${res(i1)}</b></div>
         <div>${esc(nom[i2.lados[0][0]])} – ${esc(nom[i2.lados[1][0]])}: <b>${res(i2)}</b></div>
       </div>
     </div>
-    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual y en la peor bola; en la mejor bola cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes cuentan para todos los partidos.</p>
+    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual y la peor bola de su pareja; en la mejor bola cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes de los dos cuentan.</p>
     <button class="btn sec" data-act="salir" style="width:100%">Salir (olvidar PIN en este móvil)</button>`;
 }
 
@@ -262,7 +270,7 @@ function vistaTarjeta(g, tg, nom) {
   const cfg = S.cfg;
   const sc = tg.scores;
   const ids = [g.a[0], g.a[1], g.b[0], g.b[1]];
-  const [fb, pb, i1, i2] = tg.partidos;
+  const [fb, i1, i2] = tg.partidos;
   const indDe = (id) => (i1.lados.flat().includes(id) ? i1 : i2);
   const mitad = (desde) => {
     const hs = Array.from({ length: 9 }, (_, i) => desde + i);
@@ -290,19 +298,19 @@ function vistaTarjeta(g, tg, nom) {
           const r = p.estado.hoyos[h - 1];
           if (!r) return '<td></td>';
           const k = r.r === '=' ? 'E' : r.r;
-          return `<td class="${r.muerto ? 'muerto' : ''}"><span class="r ${k}">${r.r === '=' ? '½' : '●'}</span></td>`;
+          const txt = r.r === '=' ? '½' : p.estado.porHoyo > 1 ? String(Math.abs(r.d)) : '●';
+          return `<td class="${r.muerto ? 'muerto' : ''}"><span class="r ${k}">${txt}</span></td>`;
         })
         .join('')}<td></td></tr>`;
     return `<div class="card scroll"><table class="tj">${cab}${par}${si}${jug}
-      ${fila(fb, 'Mejor b.')}
-      ${fila(pb, 'Peor b.')}
+      ${fila(fb, 'Parejas')}
       ${fila(i1, 'Ind. 1')}
       ${fila(i2, 'Ind. 2')}
     </table></div>`;
   };
   return `${mitad(1)}${mitad(10)}
     <p class="muted">Ind. 1 = ${esc(nom[i1.lados[0][0]])} – ${esc(nom[i1.lados[1][0]])} · Ind. 2 = ${esc(nom[i2.lados[0][0]])} – ${esc(nom[i2.lados[1][0]])}.<br>
-    • = golpe de hándicap en el individual. Color del punto = quién gana el hoyo; ½ = empatado.</p>`;
+    • = golpe de hándicap en el individual. Color = quién gana el hoyo; en Parejas, el número es cuántos puntos se lleva (1 o 2); ½ = empatado.</p>`;
 }
 
 
@@ -415,7 +423,7 @@ function vistaAdmin() {
           <div><label>${esc(c.equipos.A.nombre)} 2</label><select data-bind="grupos.${i}.a.1">${opts('A', g.a[1])}</select></div>
           <div><label>${esc(c.equipos.B.nombre)} 2</label><select data-bind="grupos.${i}.b.1">${opts('B', g.b[1])}</select></div>
         </div>
-        <div class="muted">Mejor y peor bola: 1+2 contra 1+2 · Individuales: 1 contra 1 y 2 contra 2</div>
+        <div class="muted">Parejas (mejor + peor bola): 1+2 contra 1+2 · Individuales: 1 contra 1 y 2 contra 2</div>
         <div class="acciones"><button class="btn sec" data-act="historial" data-v="${g.id}">Ver últimos cambios</button></div>
         ${S.historial[g.id] ? `<div class="muted">${S.historial[g.id]}</div>` : ''}
       </div>`,

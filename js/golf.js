@@ -67,36 +67,41 @@ function neto(golpes, hj, si) {
  * @param {Object} scores  { '1': {id: golpes}, ... }
  * @param {Object<string,number>} hj hándicap de juego relativo por jugador
  * @param {number[]} si índice de cada hoyo (array de 18)
+ * @param {'mejor'|'mejorpeor'} modo 'mejor' = 1 punto por hoyo a la mejor bola (o individual);
+ *   'mejorpeor' = 2 puntos por hoyo: uno a la mejor bola y otro a la peor bola de la pareja.
  */
 export function estadoPartido(lados, scores, hj, si, modo = 'mejor') {
+  const porHoyo = modo === 'mejorpeor' ? 2 : 1;
+  const comparar = (x, y) => (x < y ? 1 : y < x ? -1 : 0); // +1 si gana A
   const hoyos = [];
   let dif = 0;
   let jugados = 0;
   let cerrado = null; // {ganador, texto, hoyo}
   for (let h = 1; h <= HOYOS; h++) {
     const s = scores?.[h] || {};
-    const mejor = lados.map((ids) => {
-      const netos = ids.map((id) => neto(s[id], hj[id] || 0, si[h - 1]));
-      if (netos.some((n) => n === null)) return null; // falta alguien del lado
-      // Mejor bola: cuenta el mejor neto de la pareja. Peor bola: el peor.
-      return modo === 'peor' ? Math.max(...netos) : Math.min(...netos);
+    const netos = lados.map((ids) => {
+      const n = ids.map((id) => neto(s[id], hj[id] || 0, si[h - 1]));
+      return n.some((x) => x === null) ? null : n; // falta alguien del lado
     });
-    if (mejor[0] === null || mejor[1] === null) {
+    if (netos[0] === null || netos[1] === null) {
       hoyos.push(null);
       continue;
     }
-    let r = '=';
-    if (mejor[0] < mejor[1]) r = 'A';
-    else if (mejor[1] < mejor[0]) r = 'B';
-    // Si ambos lados levantaron, se empata el hoyo.
-    if (mejor[0] === Infinity && mejor[1] === Infinity) r = '=';
-    hoyos.push(cerrado ? { r, muerto: true } : { r });
+    const [nA, nB] = netos;
+    let d = comparar(Math.min(...nA), Math.min(...nB)); // mejor bola
+    let dPeor = null;
+    if (modo === 'mejorpeor') {
+      dPeor = comparar(Math.max(...nA), Math.max(...nB)); // peor bola
+      d += dPeor;
+    }
+    const r = d > 0 ? 'A' : d < 0 ? 'B' : '=';
+    const info = { r, d, mejor: d - (dPeor ?? 0), peor: dPeor };
+    hoyos.push(cerrado ? { ...info, muerto: true } : info);
     if (cerrado) continue;
     jugados++;
-    if (r === 'A') dif++;
-    if (r === 'B') dif--;
+    dif += d;
     const quedan = HOYOS - jugados;
-    if (Math.abs(dif) > quedan) {
+    if (Math.abs(dif) > quedan * porHoyo) {
       cerrado = {
         ganador: dif > 0 ? 'A' : 'B',
         texto: quedan === 0 ? `${Math.abs(dif)} UP` : `${Math.abs(dif)}&${quedan}`,
@@ -122,8 +127,8 @@ export function estadoPartido(lados, scores, hj, si, modo = 'mejor') {
     texto = dif === 0 ? 'AS' : `${Math.abs(dif)} UP`;
   }
   const lider = dif === 0 ? '=' : dif > 0 ? 'A' : 'B';
-  const dormie = !final && jugados > 0 && Math.abs(dif) === quedan && dif !== 0;
-  return { hoyos, dif, jugados, quedan, final, ganador, lider, texto, dormie };
+  const dormie = !final && jugados > 0 && dif !== 0 && Math.abs(dif) === quedan * porHoyo;
+  return { hoyos, dif, jugados, quedan, final, ganador, lider, texto, dormie, porHoyo };
 }
 
 /** Puntos de un partido: confirmados (si ha terminado) y proyectados (si acabase ahora). */
@@ -139,7 +144,7 @@ export function parTotal(pares) {
 }
 
 /**
- * Construye los 4 partidos de un grupo (mejor bola, peor bola y 2 individuales) con sus hándicaps.
+ * Construye los 3 partidos de un grupo (parejas a mejor + peor bola y 2 individuales) con sus hándicaps.
  * grupo: { id, a: [a1, a2], b: [b1, b2] }
  */
 export function teeDe(campo) {
@@ -156,10 +161,14 @@ export function partidosDeGrupo(grupo, cfg) {
   const [b1, b2] = grupo.b;
   const todos = [a1, a2, b1, b2];
   const camposFb = Object.fromEntries(todos.map((id) => [id, ch(id)]));
-  const hjParejas = relativos(camposFb, handicap.pctFourball);
   return [
-    { id: `${grupo.id}-fb`, tipo: 'Mejor bola', modo: 'mejor', lados: [[a1, a2], [b1, b2]], hj: hjParejas },
-    { id: `${grupo.id}-pb`, tipo: 'Peor bola', modo: 'peor', lados: [[a1, a2], [b1, b2]], hj: hjParejas },
+    {
+      id: `${grupo.id}-fb`,
+      tipo: 'Parejas (mejor + peor)',
+      modo: 'mejorpeor',
+      lados: [[a1, a2], [b1, b2]],
+      hj: relativos(camposFb, handicap.pctFourball),
+    },
     {
       id: `${grupo.id}-i1`,
       tipo: 'Individual',
@@ -192,7 +201,7 @@ export function calcularTorneo(cfg, scoresPorGrupo) {
     return { ...g, scores, partidos };
   });
   const enJuego = grupos.reduce((n, g) => n + g.partidos.length, 0);
-  const objetivo = enJuego / 2 + 0.5; // 12 partidos -> 6½ puntos
+  const objetivo = enJuego / 2 + 0.5; // 9 partidos -> 5 puntos
   return { grupos, total, enJuego, objetivo };
 }
 

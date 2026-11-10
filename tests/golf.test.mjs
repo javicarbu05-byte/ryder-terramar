@@ -72,11 +72,11 @@ test('final 1 UP en el 18', () => {
   assert.equal(e.texto, '1 UP');
 });
 
-test('torneo completo: 12 partidos y objetivo 6½', () => {
+test('torneo completo: 9 partidos y objetivo 5', () => {
   const cfg = configInicial();
   const t = calcularTorneo(cfg, {});
-  assert.equal(t.enJuego, 12);
-  assert.equal(t.objetivo, 6.5);
+  assert.equal(t.enJuego, 9);
+  assert.equal(t.objetivo, 5);
   assert.equal(fmtPts(4.5), '4½');
   assert.equal(fmtPts(0.5), '½');
 });
@@ -135,12 +135,27 @@ test('clasificación individual', () => {
   assert.equal(a1.puntos, 0);
 });
 
-test('peor bola', () => {
-  const filas = [{ a1: 3, a2: 6, b1: 4, b2: 5 }, { a1: 4, a2: 4, b1: 3, b2: 'X' }];
-  const e = estadoPartido([['a1', 'a2'], ['b1', 'b2']], sc(filas), {}, SI, 'peor');
-  assert.equal(e.hoyos[0].r, 'B'); // 6 vs 5
-  assert.equal(e.hoyos[1].r, 'A'); // 4 vs X
-  const m = estadoPartido([['a1', 'a2'], ['b1', 'b2']], sc(filas), {}, SI, 'mejor');
-  assert.equal(m.hoyos[0].r, 'A'); // 3 vs 4
-  assert.equal(m.hoyos[1].r, 'B'); // 4 vs 3
+test('parejas: mejor + peor bola, 2 puntos por hoyo', () => {
+  const L = [['a1', 'a2'], ['b1', 'b2']];
+  // Hoyo 1: A gana mejor (3<4) y peor (5<6) -> 2 UP. Hoyo 2: A mejor (3<4), B peor (5<6) -> se queda 2 UP.
+  const filas = [{ a1: 3, a2: 5, b1: 4, b2: 6 }, { a1: 3, a2: 6, b1: 4, b2: 5 }];
+  const e = estadoPartido(L, sc(filas), {}, SI, 'mejorpeor');
+  assert.equal(e.hoyos[0].d, 2);
+  assert.equal(e.hoyos[1].d, 0);
+  assert.equal(e.texto, '2 UP');
+  // Bola levantada pierde la peor bola
+  const e2 = estadoPartido(L, sc([{ a1: 4, a2: 'X', b1: 4, b2: 6 }]), {}, SI, 'mejorpeor');
+  assert.equal(e2.hoyos[0].d, -1);
+  // Cierre: 2 puntos por hoyo -> con 1 hoyo por jugar hace falta ir más de 2 arriba
+  const f = [];
+  for (let h = 1; h <= 17; h++) f.push(h <= 2 ? { a1: 3, a2: 4, b1: 4, b2: 5 } : { a1: 4, a2: 4, b1: 4, b2: 4 });
+  const e3 = estadoPartido(L, sc(f), {}, SI, 'mejorpeor');
+  assert.equal(e3.dif, 4);
+  assert.equal(e3.final, true);
+  assert.equal(e3.texto, '4&1');
+  const f2 = f.slice(0, 16);
+  f2[1] = { a1: 4, a2: 4, b1: 4, b2: 4 };
+  const e4 = estadoPartido(L, sc(f2), {}, SI, 'mejorpeor');
+  assert.equal(e4.dif, 2);
+  assert.equal(e4.final, false);
 });
