@@ -74,7 +74,7 @@ function cabecera(r) {
 function avisoDemo() {
   return modoDemo
     ? `<div class="banner"><b>Modo demo:</b> los datos se guardan solo en este navegador (prueba con dos pestañas a la vez).
-       PIN admin <b>1234</b>; grupos <b>1111</b>, <b>2222</b>, <b>3333</b>. Para usarlo de verdad, pon la configuración de Firebase en <code>js/firebase-config.js</code>.</div>`
+       PIN admin <b>1234</b>. Para usarlo de verdad, pon la configuración de Firebase en <code>js/firebase-config.js</code>.</div>`
     : '';
 }
 
@@ -141,8 +141,37 @@ function vistaMarcador() {
 }
 
 // ------------------------------------------------------------------ grupo
-function puedeApuntar(gid) {
-  return S.rol === 'admin' || S.rol === gid;
+// Guardado automático: cada toque se sube a Firebase al cabo de un momento.
+const temporizadores = {};
+S.estadoGuardado = {}; // key -> 'pendiente' | 'guardando' | 'ok' | 'error'
+function programarGuardado(gid, h) {
+  const key = `${gid}:${h}`;
+  S.estadoGuardado[key] = 'pendiente';
+  clearTimeout(temporizadores[key]);
+  temporizadores[key] = setTimeout(() => guardarHoyo(gid, h), 700);
+}
+async function guardarHoyo(gid, h) {
+  const key = `${gid}:${h}`;
+  const valores = S.draft[key];
+  if (!valores) return;
+  const enviado = { ...valores };
+  S.estadoGuardado[key] = 'guardando';
+  const p = store.apuntar(gid, h, enviado);
+  // Los golpes ya están en la caché local de Firebase: quitamos del borrador lo enviado
+  // (salvo lo que se haya vuelto a tocar mientras tanto).
+  for (const [id, v] of Object.entries(enviado)) if (S.draft[key]?.[id] === v) delete S.draft[key][id];
+  if (S.draft[key] && !Object.keys(S.draft[key]).length) delete S.draft[key];
+  try {
+    await p;
+    if (S.estadoGuardado[key] === 'guardando') S.estadoGuardado[key] = 'ok';
+  } catch (e) {
+    console.error(e);
+    S.estadoGuardado[key] = 'error';
+    (S.draft[key] ||= {});
+    for (const [id, v] of Object.entries(enviado)) if (!(id in S.draft[key])) S.draft[key][id] = v;
+    toast('No se ha podido guardar: ' + (e.message || e));
+  }
+  if (ruta().pag === 'grupo') render();
 }
 
 function hoyoInicial(gid, g) {
@@ -187,10 +216,6 @@ function formPin(rol, titulo) {
 function vistaApuntar(g, tg, nom) {
   const gid = g.id;
   const cfg = S.cfg;
-  if (!puedeApuntar(gid)) {
-    return formPin(gid, 'Para apuntar resultados, mete el PIN de tu grupo') +
-      `<p class="muted">Sin PIN puedes ver el marcador y la tarjeta igualmente.</p>`;
-  }
   const h = (S.hoyo[gid] ||= hoyoInicial(gid, g));
   const sc = tg.scores;
   const ids = [g.a[0], g.b[0], g.a[1], g.b[1]]; // rivales del individual juntos
@@ -246,14 +271,18 @@ function vistaApuntar(g, tg, nom) {
     const tot = r.d === 0 ? 'hoyo empatado' : `${lado(r.d)} +${Math.abs(r.d)}`;
     return `${tot} <span class="muted">(mejor bola: ${lado(r.mejor)} · peor bola: ${lado(r.peor)})</span>`;
   };
-  const sucio = !!S.draft[key];
+  const eg = S.estadoGuardado[key];
+  const estadoTxt =
+    eg === 'pendiente' || eg === 'guardando' ? 'Guardando…'
+    : eg === 'error' ? '⚠️ No se ha guardado: toca otra vez'
+    : eg === 'ok' ? '✓ Guardado' : 'Se guarda solo al tocar';
   return `<div class="hoyos">${botones}</div>
     <div class="card">
       <div class="hoyo-cab"><div class="n">Hoyo ${h}</div><div class="info">Par ${par}${cfg.campo.metros ? ` · ${cfg.campo.metros[h - 1]} m` : ''}<br>Índice ${si}</div></div>
       ${filas}
       <div class="acciones">
         <button class="btn sec" data-act="hoyo" data-v="${Math.max(1, h - 1)}">‹</button>
-        <button class="btn" data-act="guardar" ${sucio ? '' : 'disabled'}>${sucio ? `Guardar hoyo ${h}` : 'Guardado'}</button>
+        <div class="guardado ${eg === 'error' ? 'err' : ''}">${estadoTxt}</div>
         <button class="btn sec" data-act="hoyo" data-v="${Math.min(HOYOS, h + 1)}">›</button>
       </div>
       <div class="estado-hoyo">
@@ -262,8 +291,7 @@ function vistaApuntar(g, tg, nom) {
         <div>${esc(nom[i2.lados[0][0]])} – ${esc(nom[i2.lados[1][0]])}: <b>${res(i2)}</b></div>
       </div>
     </div>
-    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual y la peor bola de su pareja; en la mejor bola cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes de los dos cuentan.</p>
-    <button class="btn sec" data-act="salir" style="width:100%">Salir (olvidar PIN en este móvil)</button>`;
+    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual y la peor bola de su pareja; en la mejor bola cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes de los dos cuentan.</p>`;
 }
 
 function vistaTarjeta(g, tg, nom) {
@@ -415,8 +443,7 @@ function vistaAdmin() {
     .map(
       (g, i) => `<div class="gr-edit">
         <b>Grupo ${i + 1}</b>
-        <div class="fila"><div><label>Hora de salida</label>${inp(`grupos.${i}.hora`, g.hora, 'time')}</div>
-        <div><label>PIN del grupo</label><input type="text" inputmode="numeric" data-pin="${g.id}" value="${esc(S.pins[g.id] || '')}" maxlength="8"></div></div>
+        <div class="fila"><div><label>Hora de salida</label>${inp(`grupos.${i}.hora`, g.hora, 'time')}</div><div></div></div>
         <div class="fila">
           <div><label>${esc(c.equipos.A.nombre)} 1</label><select data-bind="grupos.${i}.a.0">${opts('A', g.a[0])}</select></div>
           <div><label>${esc(c.equipos.B.nombre)} 1</label><select data-bind="grupos.${i}.b.0">${opts('B', g.b[0])}</select></div>
@@ -462,9 +489,8 @@ function vistaAdmin() {
       "Generar partidos" busca, entre las 10.800 combinaciones posibles, las de individuales entre jugadores de nivel parecido y parejas equilibradas. Puedes pulsarlo varias veces para ver alternativas.</p>
     </div>
 
-    <h2>Partidos y PIN de cada grupo</h2>
+    <h2>Partidos de cada grupo</h2>
     <div class="card">${grupos}
-      <div class="acciones"><button class="btn sec" data-act="pins-azar">Generar PINs al azar</button></div>
     </div>
 
     <h2>Campo</h2>
@@ -561,6 +587,7 @@ async function accion(act, v, el) {
         else if (actual == null || actual === LEVANTADA) nv = act === 'mas' ? par : par - 1;
         else nv = Math.max(1, Math.min(15, Number(actual) + (act === 'mas' ? 1 : -1)));
         (S.draft[key] ||= {})[v] = nv;
+        programarGuardado(gid, h);
         break;
       }
       case 'guardar': {
@@ -640,16 +667,9 @@ async function accion(act, v, el) {
           out.textContent = err;
           return;
         }
-        const faltan = S.ad.grupos.filter((g) => !/^\d{4,8}$/.test(S.pins[g.id] || ''));
-        if (faltan.length) {
-          out.textContent = 'Cada grupo necesita un PIN de 4 a 8 cifras (o pulsa "Generar PINs al azar").';
-          return;
-        }
         const cambiaGrupos = S.cfg && JSON.stringify(S.cfg.grupos.map((g) => [g.a, g.b])) !== JSON.stringify(S.ad.grupos.map((g) => [g.a, g.b]));
         const hayResultados = Object.values(S.scores).some((s) => Object.keys(s.h || {}).length);
         if (cambiaGrupos && hayResultados && !confirm('Has cambiado los partidos y ya hay resultados apuntados. ¿Guardar igualmente? (Los golpes apuntados se quedan en cada grupo.)')) return;
-        const previos = await store.pins(S.ad.grupos.map((g) => g.id));
-        await Promise.all(S.ad.grupos.filter((g) => previos[g.id] !== S.pins[g.id]).map((g) => store.guardarPin(g.id, S.pins[g.id])));
         await store.guardarConfig(clone(S.ad));
         S.adMsg = '✅ Guardado y publicado. Todos los móviles ya ven los cambios.';
         break;

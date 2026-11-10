@@ -13,7 +13,7 @@ Web para seguir en directo una Ryder Cup entre amigos en el Club de Golf Terrama
 | Ruta | Qué hay |
 |---|---|
 | `#/` | Marcador general y los 9 partidos en directo |
-| `#/g/g1` (g2, g3) | Apuntar los golpes hoyo a hoyo (con el PIN del grupo) y la tarjeta |
+| `#/g/g1` (g2, g3) | Apuntar los golpes hoyo a hoyo (se guardan solos, sin PIN) y la tarjeta |
 | `#/individual` | Clasificación individual: scratch y stableford, con la tarjeta de cada jugador |
 | `#/admin` | Jugadores, hándicaps, equipos igualados, generación de partidos, PINs y datos del campo |
 
@@ -48,7 +48,7 @@ Abre http://localhost:8000 en dos pestañas. PIN de admin `1234`; grupos `1111`,
 ## Seguridad
 
 - Cualquiera con el enlace puede **ver** el marcador.
-- Para **apuntar** hay que meter el PIN del grupo; para configurar, el PIN de admin. Los PINs están en una colección que solo puede leer el admin, y las reglas (`firestore.rules`) los comprueban en el servidor.
+- Cualquiera con el enlace puede **apuntar** resultados (se guardan solos). Solo el admin, con su PIN, puede cambiar la configuración; las reglas (`firestore.rules`) lo comprueban en el servidor.
 - Cada cambio queda registrado (admin → "Ver últimos cambios").
 
 ## Campo y clasificación individual

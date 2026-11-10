@@ -1,8 +1,9 @@
 rules_version = '2';
 // Reglas de seguridad de la Ryder Cup.
 // - Todo el mundo puede VER el marcador.
-// - Para APUNTAR hay que haber metido el PIN del grupo (o el de admin).
-// - Los PIN están en /secretos, que solo puede leer el admin.
+// - Cualquiera con el enlace puede APUNTAR resultados.
+// - Solo el admin (con su PIN) puede cambiar la configuración.
+// - El PIN de admin está en /secretos, que solo puede leer el admin.
 service cloud.firestore {
   match /databases/{db}/documents {
     function acceso() {
@@ -30,12 +31,13 @@ service cloud.firestore {
       allow write: if esAdmin();
     }
 
+    // Resultados: cualquiera con el enlace puede apuntar (sin PIN de grupo).
     match /scores/{g} {
       allow read: if true;
-      allow write: if esAdmin() || esDelGrupo(g);
+      allow write: if request.auth != null;
       match /log/{id} {
         allow read: if true;
-        allow create: if esAdmin() || esDelGrupo(g);
+        allow create: if request.auth != null;
       }
     }
 
