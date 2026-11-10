@@ -84,11 +84,17 @@ h2 { font-size: 1rem; margin: 22px 0 10px; color: var(--muted); text-transform: 
 .grupo .cab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 8px; }
 .grupo .cab b { font-size: 0.95rem; }
 .grupo .cab small { color: var(--muted); }
-.partido { display: grid; grid-template-columns: 1fr 92px 1fr; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); }
+.partido { padding: 8px 0; border-top: 1px solid var(--line); }
 .partido:first-of-type { border-top: 0; }
-.partido .lado { font-size: 0.9rem; min-width: 0; overflow-wrap: anywhere; }
-.partido .lado.b { text-align: right; }
-.partido .lado .tipo { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.partido .tipo { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.partido .cruce { display: grid; grid-template-columns: 1fr 92px 1fr; align-items: stretch; gap: 6px; }
+.partido .lado {
+  font-size: 0.9rem; font-weight: 600; min-width: 0; overflow-wrap: anywhere; color: #fff;
+  border-radius: 8px; padding: 7px 9px; display: flex; align-items: center;
+}
+.partido .lado.a { background: var(--a); }
+.partido .lado.b { background: var(--b); justify-content: flex-end; text-align: right; }
+.partido .chip { display: flex; flex-direction: column; justify-content: center; }
 .chip {
   text-align: center; border-radius: 8px; padding: 6px 4px; font-weight: 700; font-size: 0.9rem;
   background: var(--line); color: var(--ink); line-height: 1.15;
@@ -179,7 +185,7 @@ input[type=color] { width: 44px; height: 40px; border: 0; background: none; padd
   padding: 10px 16px; border-radius: 999px; font-weight: 600; z-index: 10; max-width: calc(100% - 32px);
 }
 @media (max-width: 380px) {
-  .partido { grid-template-columns: 1fr 80px 1fr; }
+  .partido .cruce { grid-template-columns: 1fr 80px 1fr; }
   .marcador .pts { font-size: 2.6rem; }
   .stepper button { width: 42px; height: 42px; }
 }

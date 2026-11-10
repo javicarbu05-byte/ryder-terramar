@@ -1,10 +1,10 @@
-import { store, iniciar, on, modoDemo } from './store.js?v=20261110b';
+import { store, iniciar, on, modoDemo } from './store.js?v=202611101257';
 import {
   calcularTorneo, partidosDeGrupo, golpesEnHoyo, handicapCampo, handicapJuego, parTotal, fmtPts, HOYOS, LEVANTADA,
   clasificacion,
-} from './golf.js?v=20261110b';
-import { equilibrarEquipos, generarPartidos } from './pairing.js?v=20261110b';
-import { configInicial } from './defaults.js?v=20261110b';
+} from './golf.js?v=202611101257';
+import { equilibrarEquipos, generarPartidos } from './pairing.js?v=202611101257';
+import { configInicial } from './defaults.js?v=202611101257';
 
 const S = {
   cfg: null,
@@ -89,9 +89,12 @@ function chip(e) {
 function filaPartido(p, nom) {
   const lado = (ids) => ids.map((id) => esc(nom[id])).join(' + ');
   return `<div class="partido">
-    <div class="lado a"><span class="tipo">${p.tipo}</span>${lado(p.lados[0])}</div>
-    ${chip(p.estado)}
-    <div class="lado b"><span class="tipo">&nbsp;</span>${lado(p.lados[1])}</div>
+    <div class="tipo">${p.tipo}</div>
+    <div class="cruce">
+      <div class="lado a">${lado(p.lados[0])}</div>
+      ${chip(p.estado)}
+      <div class="lado b">${lado(p.lados[1])}</div>
+    </div>
   </div>`;
 }
 

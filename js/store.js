@@ -1,6 +1,6 @@
 // Capa de datos: Firebase (tiempo real) o modo demo (localStorage + BroadcastChannel).
 // Misma interfaz en los dos casos.
-import { firebaseConfig } from './firebase-config.js?v=20261110b';
+import { firebaseConfig } from './firebase-config.js?v=202611101257';
 
 const V = '10.12.2';
 const listeners = { config: new Set(), scores: new Set(), rol: new Set() };
