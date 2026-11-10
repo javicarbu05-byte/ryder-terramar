@@ -1,0 +1,66 @@
+rules_version = '2';
+// Reglas de seguridad de la Ryder Cup.
+// - Todo el mundo puede VER el marcador.
+// - Para APUNTAR hay que haber metido el PIN del grupo (o el de admin).
+// - Los PIN están en /secretos, que solo puede leer el admin.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function acceso() {
+      return get(/databases/$(db)/documents/accesos/$(request.auth.uid)).data;
+    }
+    function tieneAcceso() {
+      return request.auth != null
+        && exists(/databases/$(db)/documents/accesos/$(request.auth.uid));
+    }
+    function pinCorrecto(rol, pin) {
+      return exists(/databases/$(db)/documents/secretos/$(rol))
+        && get(/databases/$(db)/documents/secretos/$(rol)).data.pin == pin
+        && acceso().pin == pin;
+    }
+    // Comprueba también que el PIN siga siendo válido (si el admin lo cambia, se pierde el acceso).
+    function esAdmin() {
+      return tieneAcceso() && acceso().rol == 'admin' && pinCorrecto('admin', acceso().pin);
+    }
+    function esDelGrupo(g) {
+      return tieneAcceso() && acceso().rol == g && pinCorrecto(g, acceso().pin);
+    }
+
+    match /torneo/config {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    match /scores/{g} {
+      allow read: if true;
+      allow write: if esAdmin() || esDelGrupo(g);
+      match /log/{id} {
+        allow read: if true;
+        allow create: if esAdmin() || esDelGrupo(g);
+      }
+    }
+
+    match /secretos/{id} {
+      allow read: if esAdmin();
+      // El primer PIN de admin lo puede crear cualquiera (solo una vez: "create" falla si ya existe).
+      allow create: if request.auth != null && id == 'admin'
+        && request.resource.data.keys().hasOnly(['pin'])
+        && request.resource.data.pin is string
+        && request.resource.data.pin.size() >= 4;
+      allow write: if esAdmin()
+        && request.resource.data.keys().hasOnly(['pin'])
+        && request.resource.data.pin is string
+        && request.resource.data.pin.size() >= 4;
+      allow delete: if esAdmin();
+    }
+
+    match /accesos/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['rol', 'pin'])
+        && request.resource.data.rol is string
+        && exists(/databases/$(db)/documents/secretos/$(request.resource.data.rol))
+        && get(/databases/$(db)/documents/secretos/$(request.resource.data.rol)).data.pin
+           == request.resource.data.pin;
+    }
+  }
+}
