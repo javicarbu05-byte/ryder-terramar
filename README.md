@@ -3,7 +3,7 @@
 Web para seguir en directo una Ryder Cup entre amigos en el Club de Golf Terramar (Sitges).
 
 - **2 equipos de 6** y **3 grupos de 4** (2 contra 2), a 18 hoyos.
-- En cada grupo se juegan **a la vez** 4 partidos de match play: **mejor bola** y **peor bola** por parejas, y **dos individuales**. Cada jugador juega su bola y la web calcula los tres partidos con los mismos golpes.
+- En cada grupo se juegan **a la vez** 4 partidos de match play: **mejor bola** y **peor bola** por parejas, y **dos individuales**. Cada jugador juega su bola y la web calcula los cuatro partidos con los mismos golpes.
 - **12 puntos en juego**: victoria = 1, empate = ½. Gana el primero que llegue a **6½**.
 - Hándicap opcional: 100 % en los individuales y 90 % en mejor y peor bola (se puede cambiar).
 - Tiempo real con Firebase Firestore. Si se va la cobertura, los golpes se guardan en el móvil y se suben al volver.
