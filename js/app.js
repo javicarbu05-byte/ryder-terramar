@@ -1,10 +1,10 @@
-import { store, iniciar, on, modoDemo } from './store.js';
+import { store, iniciar, on, modoDemo } from './store.js?v=20261110b';
 import {
   calcularTorneo, partidosDeGrupo, golpesEnHoyo, handicapCampo, handicapJuego, parTotal, fmtPts, HOYOS, LEVANTADA,
   clasificacion,
-} from './golf.js';
-import { equilibrarEquipos, generarPartidos } from './pairing.js';
-import { configInicial } from './defaults.js';
+} from './golf.js?v=20261110b';
+import { equilibrarEquipos, generarPartidos } from './pairing.js?v=20261110b';
+import { configInicial } from './defaults.js?v=20261110b';
 
 const S = {
   cfg: null,
