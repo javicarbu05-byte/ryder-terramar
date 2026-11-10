@@ -1,10 +1,10 @@
-import { store, iniciar, on, modoDemo } from './store.js?v=202611101257';
+import { store, iniciar, on, modoDemo } from './store.js?v=202611101302';
 import {
   calcularTorneo, partidosDeGrupo, golpesEnHoyo, handicapCampo, handicapJuego, parTotal, fmtPts, HOYOS, LEVANTADA,
   clasificacion,
-} from './golf.js?v=202611101257';
-import { equilibrarEquipos, generarPartidos } from './pairing.js?v=202611101257';
-import { configInicial } from './defaults.js?v=202611101257';
+} from './golf.js?v=202611101302';
+import { equilibrarEquipos, generarPartidos } from './pairing.js?v=202611101302';
+import { configInicial } from './defaults.js?v=202611101302';
 
 const S = {
   cfg: null,
@@ -46,8 +46,8 @@ function ruta() {
 
 function colores(cfg) {
   const r = document.documentElement.style;
-  r.setProperty('--a', cfg?.equipos?.A?.color || '#1d4ed8');
-  r.setProperty('--b', cfg?.equipos?.B?.color || '#b91c1c');
+  r.setProperty('--a', cfg?.equipos?.A?.color || '#1f4fa8');
+  r.setProperty('--b', cfg?.equipos?.B?.color || '#b4162b');
 }
 
 const nombres = (cfg) => Object.fromEntries((cfg?.jugadores || []).map((j) => [j.id, j.nombre]));
@@ -56,15 +56,16 @@ const nGrupo = (cfg, gid) => (cfg.grupos.findIndex((g) => g.id === gid) + 1) || 
 // ------------------------------------------------------------------ cabecera
 function cabecera(r) {
   const cfg = S.cfg;
-  const sub = [cfg?.campo?.nombre, cfg?.fecha && new Date(cfg.fecha + 'T12:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })]
+  const sub = [cfg?.fecha && new Date(cfg.fecha + 'T12:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })]
     .filter(Boolean)
     .join(' · ');
   const grupos = (cfg?.grupos || [])
     .map((g, i) => `<a href="#/g/${g.id}" class="${r.gid === g.id ? 'on' : ''}">Grupo ${i + 1}</a>`)
     .join('');
   return `<header class="top"><div class="wrap">
-    <h1>⛳ ${esc(cfg?.nombre || 'Ryder Cup Terramar')}</h1>
-    <div class="sub">${esc(sub || 'Club de Golf Terramar (Sitges)')}</div>
+    <div class="sello">Club de Golf Terramar · Sitges</div>
+    <h1>${esc(cfg?.nombre || 'Ryder Cup Terramar')}</h1>
+    ${sub ? `<div class="sub">${esc(sub)}</div>` : ''}
     <nav><a href="#/" class="${r.pag === 'marcador' ? 'on' : ''}">Marcador</a>${grupos}
     <a href="#/individual" class="${r.pag === 'individual' ? 'on' : ''}">Individual</a>
     <a href="#/admin" class="${r.pag === 'admin' ? 'on' : ''}">Admin</a></nav>
@@ -128,15 +129,15 @@ function vistaMarcador() {
   return `<div class="wrap">${avisoDemo()}
     <section class="marcador">
       <div class="equipos">
-        <div class="eq"><div class="pts" style="color:var(--a)">${fmtPts(ca)}</div><div class="nom">${esc(cfg.equipos.A.nombre)}</div></div>
-        <div class="vs">${T.enJuego} pts<br>gana con ${fmtPts(T.objetivo)}</div>
-        <div class="eq"><div class="pts" style="color:var(--b)">${fmtPts(cb)}</div><div class="nom">${esc(cfg.equipos.B.nombre)}</div></div>
+        <div class="eq a"><div class="nom">${esc(cfg.equipos.A.nombre)}</div><div class="pts">${fmtPts(ca)}</div></div>
+        <div class="eq b"><div class="nom">${esc(cfg.equipos.B.nombre)}</div><div class="pts">${fmtPts(cb)}</div></div>
+        <div class="vs"><b>${fmtPts(T.objetivo)}</b><small>para ganar</small></div>
       </div>
       <div class="barra"><span style="width:${w(ca)};background:var(--a)"></span><span style="flex:1"></span><span style="width:${w(cb)};background:var(--b)"></span><i class="meta"></i></div>
-      <div class="leyenda"><span>En directo (si acabase ahora): <b>${fmtPts(pa)} – ${fmtPts(pb)}</b></span><span>${fmtPts(enJuegoPend)} en juego</span></div>
+      <div class="leyenda"><span>Proyección en directo <b>${fmtPts(pa)} – ${fmtPts(pb)}</b></span><span>${fmtPts(enJuegoPend)} de ${T.enJuego} pts en juego</span></div>
       ${ganador ? `<div class="ganador">${ganador}</div>` : ''}
     </section>
-    <h2>Partidos · parejas e individuales a la vez</h2>
+    <h2>Los partidos</h2>
     ${grupos}
     <p class="muted">Cada grupo juega 18 hoyos y 3 partidos a la vez: uno por parejas y dos individuales. En el de parejas cada hoyo vale 2: uno a la mejor bola y otro a la peor (si ganas los dos, 2 UP en ese hoyo). Cada partido da 1 punto a la Ryder (empate = ½).
     ${cfg.handicap.activo ? `Con hándicap (${cfg.handicap.pctIndividual}% individual, ${cfg.handicap.pctFourball}% parejas).` : 'Scratch (sin hándicap).'}</p>

@@ -12,8 +12,8 @@ export function configInicial() {
     nombre: 'Ryder Cup Terramar',
     fecha: '',
     equipos: {
-      A: { nombre: 'Equipo Azul', color: '#1d4ed8' },
-      B: { nombre: 'Equipo Rojo', color: '#b91c1c' },
+      A: { nombre: 'Team Europe', color: '#1f4fa8' },
+      B: { nombre: 'Team USA', color: '#b4162b' },
     },
     campo: {
       nombre: 'Club de Golf Terramar (Sitges)',
