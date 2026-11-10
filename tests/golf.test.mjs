@@ -72,11 +72,11 @@ test('final 1 UP en el 18', () => {
   assert.equal(e.texto, '1 UP');
 });
 
-test('torneo completo: 9 partidos y objetivo 5', () => {
+test('torneo completo: 12 partidos y objetivo 6½', () => {
   const cfg = configInicial();
   const t = calcularTorneo(cfg, {});
-  assert.equal(t.enJuego, 9);
-  assert.equal(t.objetivo, 5);
+  assert.equal(t.enJuego, 12);
+  assert.equal(t.objetivo, 6.5);
   assert.equal(fmtPts(4.5), '4½');
   assert.equal(fmtPts(0.5), '½');
 });
@@ -133,4 +133,14 @@ test('clasificación individual', () => {
   const a1 = c.find((j) => j.id === g.a[1]);
   assert.equal(a1.levantadas, 1);
   assert.equal(a1.puntos, 0);
+});
+
+test('peor bola', () => {
+  const filas = [{ a1: 3, a2: 6, b1: 4, b2: 5 }, { a1: 4, a2: 4, b1: 3, b2: 'X' }];
+  const e = estadoPartido([['a1', 'a2'], ['b1', 'b2']], sc(filas), {}, SI, 'peor');
+  assert.equal(e.hoyos[0].r, 'B'); // 6 vs 5
+  assert.equal(e.hoyos[1].r, 'A'); // 4 vs X
+  const m = estadoPartido([['a1', 'a2'], ['b1', 'b2']], sc(filas), {}, SI, 'mejor');
+  assert.equal(m.hoyos[0].r, 'A'); // 3 vs 4
+  assert.equal(m.hoyos[1].r, 'B'); // 4 vs 3
 });

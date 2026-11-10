@@ -133,10 +133,10 @@ function vistaMarcador() {
       <div class="leyenda"><span>En directo (si acabase ahora): <b>${fmtPts(pa)} – ${fmtPts(pb)}</b></span><span>${fmtPts(enJuegoPend)} en juego</span></div>
       ${ganador ? `<div class="ganador">${ganador}</div>` : ''}
     </section>
-    <h2>Partidos · fourball + individuales a la vez</h2>
+    <h2>Partidos · mejor bola, peor bola e individuales a la vez</h2>
     ${grupos}
-    <p class="muted">Cada grupo juega 18 hoyos: un fourball (mejor bola) y dos individuales a la vez. Victoria = 1 punto, empate = ½.
-    ${cfg.handicap.activo ? `Con hándicap (${cfg.handicap.pctIndividual}% individual, ${cfg.handicap.pctFourball}% fourball).` : 'Scratch (sin hándicap).'}</p>
+    <p class="muted">Cada grupo juega 18 hoyos y 4 partidos a la vez: mejor bola y peor bola por parejas, y dos individuales. Victoria = 1 punto, empate = ½.
+    ${cfg.handicap.activo ? `Con hándicap (${cfg.handicap.pctIndividual}% individual, ${cfg.handicap.pctFourball}% parejas).` : 'Scratch (sin hándicap).'}</p>
   </div>`;
 }
 
@@ -198,7 +198,7 @@ function vistaApuntar(g, tg, nom) {
   const val = (id) => (S.draft[key] && id in S.draft[key] ? S.draft[key][id] : sc[h]?.[id] ?? null);
   const par = cfg.campo.par[h - 1];
   const si = cfg.campo.si[h - 1];
-  const [fb, i1, i2] = tg.partidos;
+  const [fb, pb, i1, i2] = tg.partidos;
   const indDe = (id) => (i1.lados.flat().includes(id) ? i1 : i2);
 
   const botones = Array.from({ length: HOYOS }, (_, i) => {
@@ -216,7 +216,7 @@ function vistaApuntar(g, tg, nom) {
       if (cfg.handicap.activo) {
         const gi = golpesEnHoyo(indDe(id).hj[id] || 0, si);
         const gf = golpesEnHoyo(fb.hj[id] || 0, si);
-        if (gi || gf) rec = `<small>recibe ${'●'.repeat(gi) || '0'} en individual · ${'●'.repeat(gf) || '0'} en fourball</small>`;
+        if (gi || gf) rec = `<small>recibe ${'●'.repeat(gi) || '0'} en individual · ${'●'.repeat(gf) || '0'} en parejas</small>`;
       }
       const txt = v === LEVANTADA ? 'X' : v ?? '·';
       return `<div class="jug">
@@ -248,12 +248,13 @@ function vistaApuntar(g, tg, nom) {
         <button class="btn sec" data-act="hoyo" data-v="${Math.min(HOYOS, h + 1)}">›</button>
       </div>
       <div class="estado-hoyo">
-        <div>Fourball: <b>${res(fb)}</b></div>
+        <div>Mejor bola: <b>${res(fb)}</b></div>
+        <div>Peor bola: <b>${res(pb)}</b></div>
         <div>${esc(nom[i1.lados[0][0]])} – ${esc(nom[i1.lados[1][0]])}: <b>${res(i1)}</b></div>
         <div>${esc(nom[i2.lados[0][0]])} – ${esc(nom[i2.lados[1][0]])}: <b>${res(i2)}</b></div>
       </div>
     </div>
-    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual; en el fourball cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes cuentan para los dos partidos.</p>
+    <p class="muted">Pon los golpes brutos: la web aplica los hándicaps. <b>X</b> = bola levantada (pierde el hoyo en su individual y en la peor bola; en la mejor bola cuenta la de su compañero). Hay que acabar cada hoyo, porque los golpes cuentan para todos los partidos.</p>
     <button class="btn sec" data-act="salir" style="width:100%">Salir (olvidar PIN en este móvil)</button>`;
 }
 
@@ -261,7 +262,7 @@ function vistaTarjeta(g, tg, nom) {
   const cfg = S.cfg;
   const sc = tg.scores;
   const ids = [g.a[0], g.a[1], g.b[0], g.b[1]];
-  const [fb, i1, i2] = tg.partidos;
+  const [fb, pb, i1, i2] = tg.partidos;
   const indDe = (id) => (i1.lados.flat().includes(id) ? i1 : i2);
   const mitad = (desde) => {
     const hs = Array.from({ length: 9 }, (_, i) => desde + i);
@@ -293,7 +294,8 @@ function vistaTarjeta(g, tg, nom) {
         })
         .join('')}<td></td></tr>`;
     return `<div class="card scroll"><table class="tj">${cab}${par}${si}${jug}
-      ${fila(fb, 'Fourball')}
+      ${fila(fb, 'Mejor b.')}
+      ${fila(pb, 'Peor b.')}
       ${fila(i1, 'Ind. 1')}
       ${fila(i2, 'Ind. 2')}
     </table></div>`;
@@ -413,7 +415,7 @@ function vistaAdmin() {
           <div><label>${esc(c.equipos.A.nombre)} 2</label><select data-bind="grupos.${i}.a.1">${opts('A', g.a[1])}</select></div>
           <div><label>${esc(c.equipos.B.nombre)} 2</label><select data-bind="grupos.${i}.b.1">${opts('B', g.b[1])}</select></div>
         </div>
-        <div class="muted">Fourball: 1+2 contra 1+2 · Individuales: 1 contra 1 y 2 contra 2</div>
+        <div class="muted">Mejor y peor bola: 1+2 contra 1+2 · Individuales: 1 contra 1 y 2 contra 2</div>
         <div class="acciones"><button class="btn sec" data-act="historial" data-v="${g.id}">Ver últimos cambios</button></div>
         ${S.historial[g.id] ? `<div class="muted">${S.historial[g.id]}</div>` : ''}
       </div>`,
@@ -449,7 +451,7 @@ function vistaAdmin() {
         <button class="btn" data-act="generar">🎲 Generar partidos</button>
       </div>
       <p class="muted">"Hacer equipos igualados" reparte a los 12 en dos equipos con la misma suma de hándicaps.
-      "Generar partidos" busca, entre las 10.800 combinaciones posibles, las de individuales entre jugadores de nivel parecido y fourballs equilibrados. Puedes pulsarlo varias veces para ver alternativas.</p>
+      "Generar partidos" busca, entre las 10.800 combinaciones posibles, las de individuales entre jugadores de nivel parecido y parejas equilibradas. Puedes pulsarlo varias veces para ver alternativas.</p>
     </div>
 
     <h2>Partidos y PIN de cada grupo</h2>
@@ -474,10 +476,10 @@ function vistaAdmin() {
       <label class="check"><input type="checkbox" data-bind="handicap.activo" data-bool="1" ${c.handicap.activo ? 'checked' : ''}> Jugar con hándicap</label>
       <div class="fila">
         <div><label>% en individual</label>${inp('handicap.pctIndividual', c.handicap.pctIndividual, 'number')}</div>
-        <div><label>% en fourball</label>${inp('handicap.pctFourball', c.handicap.pctFourball, 'number')}</div>
+        <div><label>% en parejas (mejor y peor bola)</label>${inp('handicap.pctFourball', c.handicap.pctFourball, 'number')}</div>
         <div><label>% en stableford (clasificación individual)</label>${inp('handicap.pctStableford', c.handicap.pctStableford ?? 95, 'number')}</div>
       </div>
-      <p class="muted">El jugador con menos hándicap juega a 0 y el otro recibe la diferencia en los hoyos de índice más bajo. En el fourball, los 4 se comparan con el más bajo del grupo.</p>
+      <p class="muted">El jugador con menos hándicap juega a 0 y el otro recibe la diferencia en los hoyos de índice más bajo. En mejor y peor bola, los 4 se comparan con el más bajo del grupo.</p>
     </div>
 
     <div class="acciones"><button class="btn" data-act="guardar-config">💾 Guardar y publicar</button></div>

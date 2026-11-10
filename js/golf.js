@@ -68,7 +68,7 @@ function neto(golpes, hj, si) {
  * @param {Object<string,number>} hj hándicap de juego relativo por jugador
  * @param {number[]} si índice de cada hoyo (array de 18)
  */
-export function estadoPartido(lados, scores, hj, si) {
+export function estadoPartido(lados, scores, hj, si, modo = 'mejor') {
   const hoyos = [];
   let dif = 0;
   let jugados = 0;
@@ -78,7 +78,8 @@ export function estadoPartido(lados, scores, hj, si) {
     const mejor = lados.map((ids) => {
       const netos = ids.map((id) => neto(s[id], hj[id] || 0, si[h - 1]));
       if (netos.some((n) => n === null)) return null; // falta alguien del lado
-      return Math.min(...netos);
+      // Mejor bola: cuenta el mejor neto de la pareja. Peor bola: el peor.
+      return modo === 'peor' ? Math.max(...netos) : Math.min(...netos);
     });
     if (mejor[0] === null || mejor[1] === null) {
       hoyos.push(null);
@@ -138,7 +139,7 @@ export function parTotal(pares) {
 }
 
 /**
- * Construye los 3 partidos de un grupo (fourball + 2 individuales) con sus hándicaps.
+ * Construye los 4 partidos de un grupo (mejor bola, peor bola y 2 individuales) con sus hándicaps.
  * grupo: { id, a: [a1, a2], b: [b1, b2] }
  */
 export function teeDe(campo) {
@@ -155,13 +156,10 @@ export function partidosDeGrupo(grupo, cfg) {
   const [b1, b2] = grupo.b;
   const todos = [a1, a2, b1, b2];
   const camposFb = Object.fromEntries(todos.map((id) => [id, ch(id)]));
+  const hjParejas = relativos(camposFb, handicap.pctFourball);
   return [
-    {
-      id: `${grupo.id}-fb`,
-      tipo: 'Fourball',
-      lados: [[a1, a2], [b1, b2]],
-      hj: relativos(camposFb, handicap.pctFourball),
-    },
+    { id: `${grupo.id}-fb`, tipo: 'Mejor bola', modo: 'mejor', lados: [[a1, a2], [b1, b2]], hj: hjParejas },
+    { id: `${grupo.id}-pb`, tipo: 'Peor bola', modo: 'peor', lados: [[a1, a2], [b1, b2]], hj: hjParejas },
     {
       id: `${grupo.id}-i1`,
       tipo: 'Individual',
@@ -183,7 +181,7 @@ export function calcularTorneo(cfg, scoresPorGrupo) {
   const grupos = (cfg.grupos || []).map((g) => {
     const scores = scoresPorGrupo[g.id]?.h || {};
     const partidos = partidosDeGrupo(g, cfg).map((p) => {
-      const estado = estadoPartido(p.lados, scores, p.hj, cfg.campo.si);
+      const estado = estadoPartido(p.lados, scores, p.hj, cfg.campo.si, p.modo);
       const pts = puntos(estado);
       for (const k of ['conf', 'proy']) {
         total[k][0] += pts[k][0];
@@ -194,7 +192,7 @@ export function calcularTorneo(cfg, scoresPorGrupo) {
     return { ...g, scores, partidos };
   });
   const enJuego = grupos.reduce((n, g) => n + g.partidos.length, 0);
-  const objetivo = enJuego / 2 + 0.5; // 9 partidos -> 5 puntos
+  const objetivo = enJuego / 2 + 0.5; // 12 partidos -> 6½ puntos
   return { grupos, total, enJuego, objetivo };
 }
 
